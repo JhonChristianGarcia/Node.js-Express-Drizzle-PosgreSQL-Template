@@ -1,0 +1,24 @@
+name: "NodeJS App Workflow"
+
+on:
+  push:
+    branches:
+      - main
+      - uat
+      - dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test
+        run: | 
+          echo "Running test on ${{ github.ref_name }} branch..."
+          npm test      
