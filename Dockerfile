@@ -18,11 +18,13 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY --from=builder /usr/src/app/dist ./dist
+COPY drizzle.config.ts ./
+COPY src/drizzle ./src/drizzle
 
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npm run db:migrate && npm start"]
 
