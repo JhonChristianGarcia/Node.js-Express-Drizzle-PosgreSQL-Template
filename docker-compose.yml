@@ -1,0 +1,16 @@
+services:
+  node-js-app:
+    build: .
+    ports:
+      - 3000:3000
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: admin
+      POSTGRES_DB: books
+    
