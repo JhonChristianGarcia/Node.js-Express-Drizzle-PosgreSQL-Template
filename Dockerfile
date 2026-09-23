@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 
-FROM public.ecr.aws/lambda/nodejs:22
+FROM public.ecr.aws/lambda/nodejs:22.2025.04.24.11
 
 COPY package*.json ${LAMBDA_TASK_ROOT}/
 
