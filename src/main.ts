@@ -1,5 +1,5 @@
 import express, { Response} from 'express'
-import user_router from './routes/user.routes.js'
+import user_router from './routes/user.routes'
 import { configure } from '@codegenie/serverless-express'
 
 const app = express()
