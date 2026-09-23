@@ -4,15 +4,15 @@ on:
   push:
     branches:
       - main
-      - uat
-      - dev
+      # - uat
+      # - dev
 
 jobs:
-  test:
+  Test:
     runs-on: ubuntu-latest
 
     environment:
-      name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+      name: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
 
     steps:
       - name: Checkout code
@@ -22,3 +22,46 @@ jobs:
         run: | 
           echo "Running test on ${{ github.ref_name }} branch..."
           npm test      
+  Build-Push-Deploy:
+    runs-on: ubuntu-latest
+    needs: Test
+
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      LAMBDA_FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image
+        run: docker build -t "$ECR_REPOSITORY" .
+
+      - name: Tag image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: docker tag "$ECR_REPOSITORY:latest" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+      - name: Push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+      
+      - name: Update Lambda function code
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --image-uri "$ECR_REGISTRY/$ECR_REPOSITORY:latest"

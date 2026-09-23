@@ -1,8 +1,8 @@
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY package*.json tsconfig.json ./
 
 RUN npm ci
 
@@ -10,21 +10,17 @@ COPY . .
 
 RUN npm run build
 
-FROM node:22-alpine AS runner
 
-WORKDIR /usr/src/app
+FROM public.ecr.aws/lambda/nodejs:22
 
-ENV NODE_ENV=production
-
-COPY package*.json ./
+COPY package*.json ${LAMBDA_TASK_ROOT}/
 
 RUN npm ci --omit=dev
 
-COPY --from=builder /usr/src/app/dist ./dist
-COPY drizzle.config.ts ./
-COPY src/drizzle ./src/drizzle
+COPY --from=builder /usr/src/app/dist ${LAMBDA_TASK_ROOT}/
 
-EXPOSE 3000
+COPY drizzle.config.ts ${LAMBDA_TASK_ROOT}/
 
-CMD ["sh", "-c", "npm run db:migrate && npm start"]
+# COPY src/drizzle ${LAMBDA_TASK_ROOT}/src/drizzle
 
+CMD [ "dist/main.handler" ]
